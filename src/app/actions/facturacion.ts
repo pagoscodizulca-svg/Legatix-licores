@@ -183,15 +183,15 @@ export async function anularFactura(facturaId: string, motivo: string) {
   for (const item of original.items || []) {
     if (item.producto_id) {
       const { data: receta } = await supabase
-        .from('combo_items')
-        .select('producto_ingrediente_id, cantidad')
+        .from('productos_recetas')
+        .select('producto_base_id, cantidad')
         .eq('combo_id', item.producto_id)
 
       if (receta && receta.length > 0) {
         for (const ing of receta) {
           await supabase.from('kardex').insert({
             empresa_id: original.empresa_id,
-            producto_id: ing.producto_ingrediente_id,
+            producto_id: ing.producto_base_id,
             usuario_id: original.usuario_id,
             tipo: 'entrada',
             cantidad: Number(item.cantidad) * Number(ing.cantidad),

@@ -334,11 +334,11 @@ describe('Server Actions — Flujos Críticos, Seguridad y Manejo de Errores', (
             }),
           }
         }
-        if (table === 'combo_items') {
+        if (table === 'productos_recetas') {
           return {
             select: () => ({
               eq: async (_col: string, val: string) => ({
-                data: val === 'combo-1' ? [{ producto_ingrediente_id: 'ing-1', cantidad: 3 }] : [],
+                data: val === 'combo-1' ? [{ producto_base_id: 'ing-1', cantidad: 3 }] : [],
               }),
             }),
           }
