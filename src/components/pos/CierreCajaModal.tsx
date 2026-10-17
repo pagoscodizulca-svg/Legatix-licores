@@ -63,7 +63,7 @@ export function CierreCajaModal({ open, turnoId, onClose, onSuccess }: Props) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+    <Dialog open={open} onOpenChange={(val: boolean) => !val && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Cierre de Caja (Reporte Z)</DialogTitle>

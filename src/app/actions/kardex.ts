@@ -10,6 +10,16 @@ export async function registrarMovimientoKardex(data: {
   cantidad: number
   motivo: string
 }) {
+  if (!data.producto_id) {
+    return { success: false, error: 'El producto es obligatorio' }
+  }
+  if (!data.cantidad || data.cantidad <= 0 || !Number.isFinite(data.cantidad)) {
+    return { success: false, error: 'La cantidad debe ser mayor a cero' }
+  }
+  if (!data.motivo || data.motivo.trim().length === 0) {
+    return { success: false, error: 'El motivo es obligatorio' }
+  }
+
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   

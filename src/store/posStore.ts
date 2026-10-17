@@ -56,7 +56,7 @@ export const usePOSStore = create<POSStore>((set, get) => ({
           )
         })
       }
-    } else {
+    } else if (producto.stock_actual > 0) {
       set({
         items: [...items, {
           id: Math.random().toString(36).substring(7),

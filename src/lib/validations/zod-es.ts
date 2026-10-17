@@ -1,20 +1,19 @@
-// @ts-nocheck
 import { z } from 'zod'
 
-const esErrorMap: z.ZodErrorMap = (issue, ctx) => {
+export const esErrorMap = (issue: { code: string; message?: string }, ctx: { defaultError: string }): { message: string } => {
   let message = ctx.defaultError
 
   switch (issue.code) {
-    case z.ZodIssueCode.invalid_type:
+    case 'invalid_type':
       message = 'Tipo inválido o campo obligatorio'
       break
-    case z.ZodIssueCode.too_small:
+    case 'too_small':
       message = 'Valor demasiado pequeño o texto muy corto'
       break
-    case z.ZodIssueCode.too_big:
+    case 'too_big':
       message = 'Valor demasiado grande o texto muy largo'
       break
-    case z.ZodIssueCode.custom:
+    case 'custom':
       message = issue.message ?? 'Error de validación'
       break
   }
@@ -22,6 +21,7 @@ const esErrorMap: z.ZodErrorMap = (issue, ctx) => {
   return { message }
 }
 
-z.setErrorMap(esErrorMap)
+if (typeof (z as any).setErrorMap === 'function') {
+  ;(z as any).setErrorMap(esErrorMap)
+}
 
-export { esErrorMap }

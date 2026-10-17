@@ -7,12 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
     "@hookform/resolvers": "^5.9.1",
     "@react-pdf/renderer": "^4.9.0",
+    "@sentry/nextjs": "^11.6.0",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
     "@tanstack/react-query": "^5.104.0",
@@ -24,7 +27,7 @@
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.49.0",
-    "next": "14.2.35",
+    "next": "^14.2.35",
     "next-pwa": "^5.6.0",
     "pg": "^8.23.0",
     "react": "^18",
@@ -40,15 +43,17 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@vitest/coverage-v8": "^2.1.8",
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5",
-    "vite": "^8.3.1",
-    "vitest": "^5.0.2"
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11",
+    "vitest": "^2.1.8"
   }
 }

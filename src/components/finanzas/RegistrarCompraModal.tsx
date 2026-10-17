@@ -90,7 +90,7 @@ export function RegistrarCompraModal({ open, onClose, onSuccess, empresaId, user
   }
 
   return (
-    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+    <Dialog open={open} onOpenChange={(val: boolean) => !val && onClose()}>
       <DialogContent className="sm:max-w-[450px] bg-black/95 border-white/10 text-white backdrop-blur-xl">
         <DialogHeader>
           <DialogTitle>Registrar Factura de Compra</DialogTitle>

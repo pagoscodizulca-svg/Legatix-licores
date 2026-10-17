@@ -75,7 +75,7 @@ export function ProveedorModal({ open, onClose, onSuccess, empresaId, proveedor 
   }
 
   return (
-    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+    <Dialog open={open} onOpenChange={(val: boolean) => !val && onClose()}>
       <DialogContent className="sm:max-w-[425px] bg-black/95 border-white/10 text-white backdrop-blur-xl">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar Proveedor' : 'Nuevo Proveedor'}</DialogTitle>

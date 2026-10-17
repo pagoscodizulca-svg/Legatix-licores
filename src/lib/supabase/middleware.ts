@@ -17,7 +17,7 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
           cookiesToSet.forEach(({ name, value }) => requestHeaders.set(`cookie`, `${name}=${value}`))
           supabaseResponse = NextResponse.next({
             request: { headers: requestHeaders },
@@ -36,8 +36,15 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
-  // Rutas públicas sin auth
-  if (!user && (pathname === '/login' || pathname.startsWith('/auth'))) {
+  // Rutas públicas y endpoints de API/Cron/Monitoreo sin redirección a login
+  if (
+    !user &&
+    (pathname === '/login' ||
+      pathname.startsWith('/auth') ||
+      pathname.startsWith('/api/') ||
+      pathname.startsWith('/monitoring') ||
+      pathname === '/manifest.json')
+  ) {
     return supabaseResponse
   }
 

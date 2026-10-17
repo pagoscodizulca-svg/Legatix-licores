@@ -23,9 +23,12 @@ export const useCartStore = create<CartState>((set, get) => ({
   items: [],
   tasaCambio: 36.5, // Tasa default (se puede actualizar con API del BCV o configuración)
   
-  setTasaCambio: (tasa) => set({ tasaCambio: tasa }),
+  setTasaCambio: (tasa) => {
+    if (tasa > 0) set({ tasaCambio: tasa })
+  },
   
   addItem: (producto) => {
+    if (producto.stock_actual !== undefined && producto.stock_actual <= 0) return
     set((state) => {
       const existingItem = state.items.find((i) => i.producto.id === producto.id)
       if (existingItem) {
@@ -50,6 +53,12 @@ export const useCartStore = create<CartState>((set, get) => ({
   },
   
   updateQuantity: (productoId, cantidad) => {
+    if (cantidad <= 0) {
+      set((state) => ({
+        items: state.items.filter((i) => i.producto.id !== productoId)
+      }))
+      return
+    }
     set((state) => ({
       items: state.items.map((i) => 
         i.producto.id === productoId 

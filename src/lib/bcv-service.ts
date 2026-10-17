@@ -1,10 +1,17 @@
 import https from 'https'
 import { createClient } from '@supabase/supabase-js'
 
-// Usamos el cliente con service_role para brincar RLS al guardar la tasa
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+// Inicialización perezosa exclusiva de servidor (protege SUPABASE_SERVICE_ROLE_KEY contra ejecución en cliente)
+function getSupabaseClient() {
+  if (typeof window !== 'undefined') {
+    throw new Error('Acceso denegado: bcv-service es exclusivo del servidor')
+  }
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co'
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-key'
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: { autoRefreshToken: false, persistSession: false }
+  })
+}
 
 const BCV_URL = 'https://www.bcv.org.ve/estadisticas/indice-de-inversion'
 
@@ -76,7 +83,7 @@ export async function sincronizarTasaBcv() {
     console.log(`[BCV] Tasa extraída: ${tasaUsd} Bs/USD | Fecha Valor: ${fechaValorStr}`)
 
     // 3. Guardar en Supabase (requiere que exista la tabla tasas_bcv)
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('tasas_bcv')
       .upsert({
         fecha_valor: fechaValorStr,
@@ -113,7 +120,7 @@ export async function sincronizarTasaBcv() {
  */
 export async function obtenerUltimaTasaBcv() {
   try {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('tasas_bcv')
       .select('usd, fecha_valor, obtenida_en')
       .order('fecha_valor', { ascending: false })

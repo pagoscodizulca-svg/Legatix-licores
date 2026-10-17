@@ -21,7 +21,7 @@ export default async function ClienteDetallePage({ params }: { params: { id: str
 
   if (!cliente) notFound()
 
-  const totalCompradoUSD = facturas?.filter(f => f.estatus !== 'ANULADA').reduce((sum, f) => sum + Number(f.total_usd), 0) || 0
+  const totalCompradoUSD = facturas?.filter((f: any) => f.estatus !== 'ANULADA').reduce((sum: number, f: any) => sum + Number(f.total_usd), 0) || 0
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -79,7 +79,7 @@ export default async function ClienteDetallePage({ params }: { params: { id: str
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {facturas?.map(f => (
+                  {facturas?.map((f: any) => (
                     <tr key={f.id} className="hover:bg-gray-50">
                       <td className="p-3">{f.fecha_emision}</td>
                       <td className="p-3">{f.numero_factura}</td>

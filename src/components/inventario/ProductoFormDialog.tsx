@@ -155,7 +155,7 @@ export function ProductoFormDialog({ open, onOpenChange, empresaId, initialProdu
   }
 
   return (
-    <Dialog open={open} onOpenChange={(val) => {
+    <Dialog open={open} onOpenChange={(val: boolean) => {
       if (!val) reset()
       onOpenChange(val)
     }}>

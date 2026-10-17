@@ -19,8 +19,8 @@ export async function POST(request: Request) {
       aplicarIgtf: boolean
     } = body
 
-    if (!items || !config || !tasaBcv || !monedaPrincipal) {
-      return NextResponse.json({ error: 'Faltan parámetros requeridos' }, { status: 400 })
+    if (!items || !Array.isArray(items) || !config || !tasaBcv || tasaBcv <= 0 || !monedaPrincipal) {
+      return NextResponse.json({ error: 'Faltan parámetros requeridos o son inválidos' }, { status: 400 })
     }
 
     const calculo = calcularFacturaFiscal(

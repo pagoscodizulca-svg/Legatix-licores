@@ -66,7 +66,7 @@ export default async function CierreDiarioPage({
   const inventarioMap = new Map<string, { nombre: string, sku: string, inicial: number, final: number }>()
   
   if (kardexRes.data) {
-    kardexRes.data.forEach(mov => {
+    kardexRes.data.forEach((mov: any) => {
       const pid = mov.producto_id
       const p = mov.productos as any
       if (!inventarioMap.has(pid)) {

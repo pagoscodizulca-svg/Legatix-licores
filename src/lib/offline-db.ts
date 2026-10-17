@@ -58,7 +58,7 @@ export async function enqueueAction(type: SyncAction['type'], payload: any): Pro
 export async function getSyncQueue(): Promise<SyncAction[]> {
   try {
     const db = await initDB()
-    return new Promise((resolve, reject) => {
+    return await new Promise((resolve, reject) => {
       const tx = db.transaction(STORE_NAME, 'readonly')
       const store = tx.objectStore(STORE_NAME)
       const request = store.getAll()

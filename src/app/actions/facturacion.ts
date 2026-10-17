@@ -17,6 +17,14 @@ export async function emitirFacturaPOS(data: {
 }) {
   const supabase = createClient()
 
+  if (!data.items || data.items.length === 0) {
+    return { success: false, error: 'La factura debe contener al menos un producto' }
+  }
+
+  if (!data.tasa_bcv || data.tasa_bcv <= 0) {
+    return { success: false, error: 'Tasa BCV inválida' }
+  }
+
   // 1. Obtener Configuración Fiscal
   const { data: configFiscal } = await supabase
     .from('config_fiscal')
@@ -28,9 +36,51 @@ export async function emitirFacturaPOS(data: {
     return { success: false, error: 'Configuración fiscal no encontrada' }
   }
 
+  // 1.5 Validar precios y alícuotas reales contra la base de datos (Seguridad contra manipulación del cliente)
+  const productIds = data.items.map(i => i.producto_id).filter(Boolean) as string[]
+  const dbProductsMap = new Map<string, any>()
+
+  if (productIds.length > 0) {
+    const { data: dbProducts } = await supabase
+      .from('productos')
+      .select('id, precio_venta_usd, gravado_iva, nombre, codigo_sku, unidad_medida')
+      .in('id', productIds)
+      .eq('empresa_id', data.empresa_id)
+
+    if (dbProducts) {
+      for (const p of dbProducts) {
+        dbProductsMap.set(p.id, p)
+      }
+    }
+  }
+
+  const sanitizedItems: CrearItemPayload[] = []
+  for (const item of data.items) {
+    if (item.cantidad <= 0) {
+      return { success: false, error: `Cantidad inválida para el producto ${item.descripcion}` }
+    }
+    const descPct = item.descuento_pct ?? 0
+    if (descPct < 0 || descPct > 100) {
+      return { success: false, error: `Porcentaje de descuento inválido (${descPct}%)` }
+    }
+
+    const dbProd = item.producto_id ? dbProductsMap.get(item.producto_id) : null
+    const verifiedPrice = dbProd ? Number(dbProd.precio_venta_usd) : item.precio_unitario_usd
+
+    if (verifiedPrice < 0) {
+      return { success: false, error: `Precio unitario inválido para ${item.descripcion}` }
+    }
+
+    sanitizedItems.push({
+      ...item,
+      precio_unitario_usd: verifiedPrice,
+      tipo_alicuota: dbProd ? (dbProd.gravado_iva ? 'GENERAL' : 'EXENTO') : item.tipo_alicuota,
+    })
+  }
+
   // 2. Recalcular todo en el servidor (Seguridad)
-  const aplicaIgtf = data.moneda_principal !== 'VES' || data.pagos.some(p => p.moneda === 'USD')
-  const totales = calcularFacturaFiscal(data.items, configFiscal as ConfigFiscal, data.tasa_bcv, data.moneda_principal, aplicaIgtf)
+  const aplicaIgtf = false // IGTF deshabilitado por regla de negocio actual
+  const totales = calcularFacturaFiscal(sanitizedItems, configFiscal as ConfigFiscal, data.tasa_bcv, data.moneda_principal, aplicaIgtf)
 
   // 3. Preparar payload de Factura
   const facturaPayload = {
@@ -44,7 +94,7 @@ export async function emitirFacturaPOS(data: {
     tasa_bcv: data.tasa_bcv,
     fecha_emision: new Date().toISOString().split('T')[0],
     aplica_igtf: aplicaIgtf,
-    base_igtf: aplicaIgtf ? totales.total - totales.igtf : 0,
+    base_igtf: 0,
     monto_igtf: totales.igtf,
     alicuota_igtf_aplicada: configFiscal.alicuota_igtf,
     base_imponible_general: totales.base_general,
@@ -64,7 +114,7 @@ export async function emitirFacturaPOS(data: {
   }
 
   // 4. Preparar payload de Items
-  const itemsPayload = data.items.map((item, idx) => {
+  const itemsPayload = sanitizedItems.map((item, idx) => {
     const calc = calcularItemFiscal(item, configFiscal as ConfigFiscal, data.tasa_bcv)
     return {
       producto_id: item.producto_id,
@@ -106,7 +156,7 @@ export async function emitirFacturaPOS(data: {
 export async function anularFactura(facturaId: string, motivo: string) {
   const supabase = createClient()
   
-  // 1. Obtener la factura original
+  // 1. Obtener la factura original con sus ítems
   const { data: original, error: errGet } = await supabase
     .from('facturas')
     .select('*, items:facturas_items(*)')
@@ -116,77 +166,55 @@ export async function anularFactura(facturaId: string, motivo: string) {
   if (errGet || !original) return { success: false, error: 'Factura no encontrada' }
   if (original.estatus === 'ANULADA') return { success: false, error: 'Ya está anulada' }
   
-  // 2. Generar payload reverso
-  const payloadFactura = {
-    empresa_id: original.empresa_id,
-    cliente_id: original.cliente_id,
-    usuario_id: original.usuario_id, // Idealmente el user actual, pero simplificado
-    tipo_documento: 'NOTA_CREDITO',
-    condicion_pago: original.condicion_pago,
-    moneda_principal: original.moneda_principal,
-    tasa_bcv: original.tasa_bcv,
-    fecha_emision: new Date().toISOString().split('T')[0],
-    aplica_igtf: original.aplica_igtf,
-    base_igtf: -original.base_igtf,
-    monto_igtf: -original.monto_igtf,
-    alicuota_igtf_aplicada: original.alicuota_igtf_aplicada,
-    base_imponible_general: -original.base_imponible_general,
-    monto_iva_general: -original.monto_iva_general,
-    base_imponible_adicional: -original.base_imponible_adicional,
-    monto_iva_adicional: -original.monto_iva_adicional,
-    base_imponible_reducida: -original.base_imponible_reducida,
-    monto_iva_reducida: -original.monto_iva_reducida,
-    monto_exento: -original.monto_exento,
-    subtotal_usd: -original.subtotal_usd,
-    total_iva_usd: -original.total_iva_usd,
-    total_usd: -original.total_usd,
-    total_ves: -original.total_ves,
-    alicuota_iva_general_aplicada: original.alicuota_iva_general_aplicada,
-    alicuota_iva_adicional_aplicada: original.alicuota_iva_adicional_aplicada,
-    observaciones: `Anulación de factura ${original.numero_factura}. Motivo: ${motivo}`
-  }
-  
-  const payloadItems = original.items.map((i: any) => ({
-    producto_id: i.producto_id,
-    descripcion: i.descripcion,
-    codigo_sku: i.codigo_sku,
-    cantidad: -i.cantidad, // Negativo para entrada al kardex! (El RPC hace ABS si es salida, wait. El RPC hace 'salida' siempre para facturas.)
-    unidad_medida: i.unidad_medida,
-    precio_unitario_usd: i.precio_unitario_usd,
-    precio_unitario_ves: i.precio_unitario_ves,
-    descuento_pct: i.descuento_pct,
-    monto_descuento_usd: -i.monto_descuento_usd,
-    subtotal_usd: -i.subtotal_usd,
-    tipo_alicuota: i.tipo_alicuota,
-    alicuota_iva_pct: i.alicuota_iva_pct,
-    monto_iva_usd: -i.monto_iva_usd,
-    total_usd: -i.total_usd,
-    aplica_alicuota_adicional: i.aplica_alicuota_adicional,
-    alicuota_adicional_pct: i.alicuota_adicional_pct,
-    monto_iva_adicional_usd: -i.monto_iva_adicional_usd,
-    orden: i.orden
-  }))
-  
-  // TODO: Como el RPC "emitir_factura_pos" inserta "salida" fija, una NC debería meter "entrada".
-  // Para no complicar la demo, marcamos la factura original como ANULADA.
-  
-  const { error: errUpdate } = await supabase.from('facturas').update({ estatus: 'ANULADA' }).eq('id', original.id)
+  // 2. Marcar documento como ANULADA y registrar motivo en observaciones
+  const nuevaObservacion = original.observaciones
+    ? `${original.observaciones} | Anulada: ${motivo}`
+    : `Anulada: ${motivo}`
+
+  const { error: errUpdate } = await supabase
+    .from('facturas')
+    .update({ estatus: 'ANULADA', observaciones: nuevaObservacion })
+    .eq('id', original.id)
+    .eq('empresa_id', original.empresa_id)
+
   if (errUpdate) return { success: false, error: errUpdate.message }
   
-  // Devolver el inventario (Entrada manual por cada item)
-  for (const item of original.items) {
+  // 3. Revertir el inventario en el Kardex (soportando productos simples y recetas de Combos)
+  for (const item of original.items || []) {
     if (item.producto_id) {
-      await supabase.from('kardex').insert({
-        empresa_id: original.empresa_id,
-        producto_id: item.producto_id,
-        usuario_id: original.usuario_id,
-        tipo: 'entrada',
-        cantidad: item.cantidad,
-        motivo: `Anulación Fac. ${original.numero_factura}`,
-        stock_anterior: 0, stock_nuevo: 0
-      })
+      const { data: receta } = await supabase
+        .from('combo_items')
+        .select('producto_ingrediente_id, cantidad')
+        .eq('combo_id', item.producto_id)
+
+      if (receta && receta.length > 0) {
+        for (const ing of receta) {
+          await supabase.from('kardex').insert({
+            empresa_id: original.empresa_id,
+            producto_id: ing.producto_ingrediente_id,
+            usuario_id: original.usuario_id,
+            tipo: 'entrada',
+            cantidad: Number(item.cantidad) * Number(ing.cantidad),
+            motivo: `Anulación Nota ${original.numero_factura} (Combo)`,
+            stock_anterior: 0,
+            stock_nuevo: 0
+          })
+        }
+      } else {
+        await supabase.from('kardex').insert({
+          empresa_id: original.empresa_id,
+          producto_id: item.producto_id,
+          usuario_id: original.usuario_id,
+          tipo: 'entrada',
+          cantidad: item.cantidad,
+          motivo: `Anulación Nota ${original.numero_factura}`,
+          stock_anterior: 0,
+          stock_nuevo: 0
+        })
+      }
     }
   }
   
   return { success: true }
 }
+

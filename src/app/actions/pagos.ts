@@ -9,6 +9,16 @@ export async function registrarPago(payload: {
   referencia?: string
   tasa_bcv_dia?: number
 }) {
+  if (!payload.factura_id) {
+    return { success: false, error: 'ID de factura es requerido' }
+  }
+  if (!payload.moneda) {
+    return { success: false, error: 'Moneda de pago es requerida' }
+  }
+  if (!payload.monto || payload.monto <= 0 || !Number.isFinite(payload.monto)) {
+    return { success: false, error: 'El monto del pago debe ser mayor a cero' }
+  }
+
   const supabase = createClient()
   
   try {

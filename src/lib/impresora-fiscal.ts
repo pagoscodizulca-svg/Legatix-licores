@@ -39,10 +39,10 @@ export const impresoraFiscal = {
     // 1. Estructuramos el payload exacto que suelen requerir las APIs fiscales (Ej: IntiPOS / The Factory)
     const payloadFiscal = {
       cliente: {
-        nombre: cliente.razon_social,
-        rif: `${cliente.tipo_doc}-${cliente.numero_doc}`,
-        direccion: cliente.direccion_fiscal || 'CIUDAD',
-        telefono: cliente.telefono || ''
+        nombre: cliente?.razon_social || 'CONSUMIDOR FINAL',
+        rif: cliente?.tipo_doc && cliente?.numero_doc ? `${cliente.tipo_doc}-${cliente.numero_doc}` : 'V-00000000',
+        direccion: cliente?.direccion_fiscal || 'CIUDAD',
+        telefono: cliente?.telefono || ''
       },
       factura: {
         numeroInterno: factura.numero_factura,
@@ -50,8 +50,8 @@ export const impresoraFiscal = {
         tasaBcv: factura.tasa_bcv,
         moneda: factura.moneda_principal
       },
-      items: items.map(item => ({
-        descripcion: item.descripcion.substring(0, 40), // Las impresoras fiscales suelen tener límite de caracteres
+      items: (items || []).map(item => ({
+        descripcion: (item.descripcion || 'PRODUCTO').substring(0, 40), // Las impresoras fiscales suelen tener límite de caracteres
         cantidad: item.cantidad,
         precioUnitario: item.precio_unitario_ves,
         tipoAlicuota: item.tipo_alicuota, // 'GENERAL' (16%), 'ADICIONAL' (15%), etc.
@@ -66,28 +66,34 @@ export const impresoraFiscal = {
         montoApercibido: factura.monto_igtf
       },
       pieDePagina: [
-        config.pie_pagina_1,
-        config.pie_pagina_2
+        config?.pie_pagina_1,
+        config?.pie_pagina_2
       ].filter(Boolean)
     }
 
     console.log('📦 ENVIANDO COMANDO A IMPRESORA FISCAL:', JSON.stringify(payloadFiscal, null, 2))
 
     try {
-      // ====================================================================
-      // AQUÍ IRÁ LA INTEGRACIÓN REAL CON EL SPOOLER O WEB SERIAL API
-      // ====================================================================
-      // Ejemplo: 
-      // const response = await fetch('http://127.0.0.1:8888/imprimir', {
-      //   method: 'POST',
-      //   body: JSON.stringify(payloadFiscal)
-      // })
-      // const data = await response.json()
-      
-      // ====================================================================
-      // SIMULACIÓN POR AHORA
-      // ====================================================================
-      await new Promise(resolve => setTimeout(resolve, 800)) // Simula el tiempo que tarda la impresora
+      const spoolerUrl = process.env.NEXT_PUBLIC_FISCAL_SPOOLER_URL
+      if (spoolerUrl) {
+        const response = await fetch(`${spoolerUrl}/imprimir`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payloadFiscal)
+        })
+        if (!response.ok) {
+          throw new Error(`Spooler HTTP ${response.status}`)
+        }
+        const data = await response.json()
+        return {
+          exito: true,
+          numeroFacturaFiscal: data.numeroFacturaFiscal || factura.numero_factura,
+          serialImpresora: data.serialImpresora || 'Z1B987654321',
+          mensaje: data.mensaje || 'Factura impresa correctamente'
+        }
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 800))
 
       return {
         exito: true,
@@ -112,8 +118,15 @@ export const impresoraFiscal = {
     console.log('📦 ENVIANDO COMANDO DE REPORTE Z A IMPRESORA FISCAL')
     
     try {
-      // Simulación
-      await new Promise(resolve => setTimeout(resolve, 800))
+      const spoolerUrl = process.env.NEXT_PUBLIC_FISCAL_SPOOLER_URL
+      if (spoolerUrl) {
+        const response = await fetch(`${spoolerUrl}/reporte-z`, { method: 'POST' })
+        if (!response.ok) {
+          throw new Error(`Spooler HTTP ${response.status}`)
+        }
+      } else {
+        await new Promise(resolve => setTimeout(resolve, 800))
+      }
       
       return {
         exito: true,

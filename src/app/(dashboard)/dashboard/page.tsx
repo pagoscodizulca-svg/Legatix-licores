@@ -83,22 +83,22 @@ export default async function DashboardPage() {
   const cxcFacturas = cxcFacturasRes.data
   const cxpFacturas = cxpFacturasRes.data
 
-  const totalUSD = facturasHoy?.reduce((acc, f) => acc + Number(f.total_usd), 0) || 0
-  const totalVES = facturasHoy?.reduce((acc, f) => acc + Number(f.total_ves), 0) || 0
+  const totalUSD = facturasHoy?.reduce((acc: number, f: any) => acc + Number(f.total_usd), 0) || 0
+  const totalVES = facturasHoy?.reduce((acc: number, f: any) => acc + Number(f.total_ves), 0) || 0
   const cantidadFacturas = facturasHoy?.length || 0
 
-  const pagosPorMoneda = (pagosData || []).reduce((acc: Record<string, number>, p: any) => {
+  const pagosPorMoneda: Record<string, number> = (pagosData || []).reduce((acc: Record<string, number>, p: any) => {
     const metodo = p.referencia || p.moneda
     acc[metodo] = (acc[metodo] || 0) + Number(p.monto)
     return acc
   }, {})
 
-  const totalCxC = (cxcFacturas || []).reduce((acc, f: any) => {
+  const totalCxC = (cxcFacturas || []).reduce((acc: number, f: any) => {
     const abonado = (f.pagos || []).reduce((pAcc: number, p: any) => pAcc + Number(p.monto), 0)
     return acc + Math.max(0, Number(f.total_usd) - abonado)
   }, 0)
 
-  const totalCxP = (cxpFacturas || []).reduce((acc, f: any) => {
+  const totalCxP = (cxpFacturas || []).reduce((acc: number, f: any) => {
     const totalUsd = f.moneda === 'VES' ? Number(f.total_factura) / Number(f.tasa_bcv) : Number(f.total_factura)
     const abonado = (f.pagos || []).reduce((pAcc: number, p: any) => pAcc + Number(p.monto), 0)
     const abonadoUsd = f.moneda === 'VES' ? abonado / Number(f.tasa_bcv) : abonado
@@ -180,13 +180,14 @@ export default async function DashboardPage() {
             ) : (
               <div className="divide-y divide-border/50">
                 {Object.entries(pagosPorMoneda).map(([metodo, monto]) => {
+                  const montoNum = Number(monto)
                   let icono = <Coins className="h-5 w-5" />
-                  let formato = formatVES(monto)
+                  let formato = formatVES(montoNum)
                   let nombreFormateado = metodo.replace('_', ' ')
 
                   if (metodo === 'EFECTIVO_USD' || metodo === 'USD') {
                     icono = <DollarSign className="h-5 w-5" />
-                    formato = formatUSD(monto)
+                    formato = formatUSD(montoNum)
                   } else if (metodo === 'EFECTIVO_BS' || metodo === 'VES') {
                     icono = <Banknote className="h-5 w-5" />
                   } else if (metodo.includes('TARJETA') || metodo === 'PUNTO') {
@@ -226,7 +227,7 @@ export default async function DashboardPage() {
           <CardContent className="p-0">
             {productosStockBajo && productosStockBajo.length > 0 ? (
               <div className="divide-y divide-border/50">
-                {productosStockBajo.map(prod => (
+                {productosStockBajo.map((prod: any) => (
                   <div key={prod.id} className="flex items-center justify-between p-4 hover:bg-secondary/30 transition-colors">
                     <div>
                       <p className="font-medium text-sm text-foreground truncate max-w-[180px]">{prod.nombre}</p>

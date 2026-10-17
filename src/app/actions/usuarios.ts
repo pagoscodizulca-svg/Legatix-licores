@@ -88,6 +88,7 @@ export async function toggleUserStatusAction(userId: string, currentStatus: bool
       .from('usuarios')
       .update({ activo: !currentStatus })
       .eq('id', userId)
+      .eq('empresa_id', usuario.empresa_id)
 
     if (error) throw new Error(error.message)
 
