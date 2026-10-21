@@ -2,6 +2,7 @@
 UPDATE empresas
 SET
   razon_social = 'INVERSIONES SAN JOSE 2026, C.A',
+  nombre_comercial = 'EL PALACIO DE LAS BEBIDAS',
   rif = 'J-50829833-0',
   direccion_fiscal = 'AV 19D CON CALLE 96B LOCAL NRO S/N BARRIO SAN JOSE, MARACAIBO ZULIA ZONA POSTAL 4002'
 WHERE true;

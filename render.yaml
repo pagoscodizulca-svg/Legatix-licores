@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: legatix-licores
+    runtime: node
+    plan: free
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: NPM_FLAGS
+        value: --legacy-peer-deps
